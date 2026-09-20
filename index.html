@@ -78,12 +78,14 @@ input:focus{outline:3px solid var(--sea);outline-offset:1px}
 const CONFIG={
   endpoint:"aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3dzFCcU9OeThIcTdReTZScl81YlZ0RjFFRWxNcVhGUldUUkUxLUpUZXppeHNvSG9BVkJteDZCZHUxNmVjai1FWGIvZXhlYw==",
   handle:"ROFiNCrypto",
+  devHandle:"nlnahal",
   profileUrl:"https://x.com/ROFiNCrypto",
   pinnedPostUrl:"https://x.com/ROFiNCrypto/status/2101562970199191923"
 };
 const POST_ID=(CONFIG.pinnedPostUrl.match(/status\/(\d+)/)||[])[1]||"";
 const INTENT={
   follow:"https://x.com/intent/follow?screen_name="+encodeURIComponent(CONFIG.handle),
+  followDev:"https://x.com/intent/follow?screen_name="+encodeURIComponent(CONFIG.devHandle),
   like:POST_ID?"https://x.com/intent/like?tweet_id="+POST_ID:CONFIG.pinnedPostUrl,
   repost:POST_ID?"https://x.com/intent/retweet?tweet_id="+POST_ID:CONFIG.pinnedPostUrl,
   reply:CONFIG.pinnedPostUrl
@@ -930,24 +932,28 @@ const finalView=document.getElementById("final");
 const steps=[
  {body(){return '<p class="step">TASK 1 OF 4</p><h2>ENTER YOUR X USERNAME</h2>'+
    '<input id="f_user" type="text" autocomplete="off" placeholder="X Username" value="'+data.username+'">'+
-   '<p>Follow @'+CONFIG.handle+' on X</p>'+
+   '<p>Follow both accounts on X</p>'+
    '<div class="row"><button class="btn ghost small" id="f_open">FOLLOW @'+CONFIG.handle+'</button></div>'+
    '<div class="check" id="f_follow"><span class="box"></span><span>I have followed @'+CONFIG.handle+'</span></div>'+
+   '<div class="row"><button class="btn ghost small" id="f_open2">FOLLOW @'+CONFIG.devHandle+'</button></div>'+
+   '<div class="check" id="f_follow2"><span class="box"></span><span>I have followed @'+CONFIG.devHandle+'</span></div>'+
    '<p class="err" id="f_err"></p>'+
    '<div class="row"><button class="btn" id="f_go" disabled>VERIFY</button></div>'+
-   '<p class="note">Entries are checked on X before the whitelist is finalized.</p>'},
+   '<p class="note">Both follows are required. Entries are checked on X before the whitelist is finalized.</p>'},
   wire(done){
     const user=document.getElementById("f_user"),go=document.getElementById("f_go"),err=document.getElementById("f_err");
-    const follow=document.getElementById("f_follow");
-    let opened=false,ticked=false;
+    const follow=document.getElementById("f_follow"),follow2=document.getElementById("f_follow2");
+    const opened={main:false,dev:false},ticked={main:false,dev:false};
     const valid=()=>/^@?[A-Za-z0-9_]{2,15}$/.test(user.value.trim());
-    const sync=()=>{go.disabled=!(valid()&&opened&&ticked)};
+    const sync=()=>{go.disabled=!(valid()&&ticked.main&&ticked.dev)};
     user.addEventListener("input",sync);
-    document.getElementById("f_open").addEventListener("click",()=>{opened=true;openX(INTENT.follow);sync()});
-    follow.addEventListener("click",()=>{
-      if(!opened){err.textContent="Tap the follow button first.";return}
-      ticked=!ticked;err.textContent="";
-      follow.querySelector(".box").classList.toggle("done",ticked);sync();});
+    document.getElementById("f_open").addEventListener("click",()=>{opened.main=true;openX(INTENT.follow)});
+    document.getElementById("f_open2").addEventListener("click",()=>{opened.dev=true;openX(INTENT.followDev)});
+    [[follow,"main"],[follow2,"dev"]].forEach(pair=>{
+      pair[0].addEventListener("click",()=>{
+        if(!opened[pair[1]]){err.textContent="Tap the follow button above first.";return}
+        ticked[pair[1]]=!ticked[pair[1]];err.textContent="";
+        pair[0].querySelector(".box").classList.toggle("done",ticked[pair[1]]);sync();});});
     go.addEventListener("click",()=>{
       if(!valid()){err.textContent="Enter a valid X username.";return}
       data.username=user.value.trim().replace(/^@/,"");store.write(data);done();});
